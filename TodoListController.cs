@@ -23,12 +23,52 @@ namespace WebApplication1.Controllers
             return _todoList;
         }
 
+        [HttpGet("placeholder")]
+        public IActionResult GetPlaceHolderData()
+        {
+            var placeholderData = new List<Todos>
+            {
+                new Todos { Id = 1, Description = "Coding assignment!", Date = "29.04.2024", Priority = "High", Completed = false},
+                new Todos {Id = 2, Description = "Finished coding assignment", Date = "20.04.2024", Priority = "Medium" ,Completed = true}
+
+            };
+            return Ok(placeholderData);
+        }
+
+        [HttpGet("filter")]
+        public IEnumerable<Todos> GetFiltered([FromQuery] bool completed)
+        {
+            return _todoList.Where(todo => todo.Completed == completed);
+        }
+        [HttpGet("page")]
+        public IEnumerable<Todos> GetPage([FromQuery] int pageNumber, [FromQuery] int pageSize)
+        {
+            return _todoList.Skip((pageNumber - 1) * pageSize).Take(pageSize);
+        }
+        [HttpGet("sort")]
+        public IEnumerable<Todos> GetSort([FromQuery] string sortBy)
+        {
+            switch (sortBy.ToLower())
+            {
+                case "date":
+                    return _todoList.OrderBy(todo => todo.Date);
+                case "priority":
+                    return _todoList.OrderBy(todo => todo.Priority);
+                default:
+                    return _todoList;
+            }
+        }
+
         [HttpPost]
         public IActionResult Post([FromBody] Todos todos)
         {
             if (todos == null)
             {
                 return BadRequest("A Todo item cannot be null");
+            }
+            if (string.IsNullOrEmpty(todos.Description))
+            {
+                return BadRequest("A Todo item must have a description!");
             }
 
             _todoList.Add(todos);
@@ -40,7 +80,9 @@ namespace WebApplication1.Controllers
             var existingTodos = _todoList.FirstOrDefault(t => t.Id == id);
             if (existingTodos == null)
             {
-                return NotFound();
+                updatedTodos.Id = id;
+                _todoList.Add(updatedTodos);
+                return CreatedAtAction(nameof(Get), new { id = updatedTodos.Id }, updatedTodos);
             }
 
             existingTodos.Description = updatedTodos.Description;
